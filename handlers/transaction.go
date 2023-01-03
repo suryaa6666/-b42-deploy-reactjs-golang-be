@@ -23,7 +23,7 @@ import (
 // Declare Coreapi Client ...
 var c = coreapi.Client{
 	ServerKey: os.Getenv("SERVER_KEY"),
-	ClientKey:  os.Getenv("CLIENT_KEY"),
+	ClientKey: os.Getenv("CLIENT_KEY"),
 }
 
 type handlerTransaction struct {
@@ -49,11 +49,6 @@ func (h *handlerTransaction) FindTransactions(w http.ResponseWriter, r *http.Req
 	var responseTransaction []transactiondto.TransactionResponse
 	for _, t := range transactions {
 		responseTransaction = append(responseTransaction, convertResponseTransaction(t))
-	}
-
-	for i, t := range responseTransaction {
-		imagePath := os.Getenv("PATH_FILE") + t.Product.Image
-		responseTransaction[i].Product.Image = imagePath
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -88,12 +83,12 @@ func (h *handlerTransaction) CreateTransaction(w http.ResponseWriter, r *http.Re
 	}
 
 	transaction := models.Transaction{
-		ID: TransactionId,
+		ID:        TransactionId,
 		ProductID: request.ProductId,
-		BuyerID: userId,
-		SellerID: request.SellerId,
-		Price: request.Price,
-		Status: "pending",
+		BuyerID:   userId,
+		SellerID:  request.SellerId,
+		Price:     request.Price,
+		Status:    "pending",
 	}
 
 	newTransaction, err := h.TransactionRepository.CreateTransaction(transaction)
@@ -109,28 +104,28 @@ func (h *handlerTransaction) CreateTransaction(w http.ResponseWriter, r *http.Re
 		json.NewEncoder(w).Encode(err.Error())
 		return
 	}
-	
+
 	// Request payment token from midtrans ...
 	// 1. Initiate Snap client
 	var s = snap.Client{}
 	s.New(os.Getenv("SERVER_KEY"), midtrans.Sandbox)
 	// Use to midtrans.Production if you want Production Environment (accept real transaction).
-	
+
 	// 2. Initiate Snap request param
 	req := &snap.Request{
 		TransactionDetails: midtrans.TransactionDetails{
-		  OrderID:  strconv.Itoa(dataTransactions.ID),
-		  GrossAmt: int64(dataTransactions.Price),
-		}, 
+			OrderID:  strconv.Itoa(dataTransactions.ID),
+			GrossAmt: int64(dataTransactions.Price),
+		},
 		CreditCard: &snap.CreditCardDetails{
-		  Secure: true,
+			Secure: true,
 		},
 		CustomerDetail: &midtrans.CustomerDetails{
-		  FName: dataTransactions.Buyer.Name,
-		  Email: dataTransactions.Buyer.Email,
+			FName: dataTransactions.Buyer.Name,
+			Email: dataTransactions.Buyer.Email,
 		},
-	  }
-	
+	}
+
 	// 3. Execute request create Snap transaction to Midtrans Snap API
 	snapResp, _ := s.CreateTransaction(req)
 
@@ -161,28 +156,28 @@ func (h *handlerTransaction) Notification(w http.ResponseWriter, r *http.Request
 		if fraudStatus == "challenge" {
 			// TODO set transaction status on your database to 'challenge'
 			// e.g: 'Payment status challenged. Please take action on your Merchant Administration Portal
-			h.TransactionRepository.UpdateTransaction("pending",  orderId)
+			h.TransactionRepository.UpdateTransaction("pending", orderId)
 		} else if fraudStatus == "accept" {
 			// TODO set transaction status on your database to 'success'
 			SendMail("success", transaction)
-			h.TransactionRepository.UpdateTransaction("success",  orderId)
+			h.TransactionRepository.UpdateTransaction("success", orderId)
 		}
 	} else if transactionStatus == "settlement" {
 		// TODO set transaction status on your databaase to 'success'
 		SendMail("success", transaction)
-		h.TransactionRepository.UpdateTransaction("success",  orderId)
+		h.TransactionRepository.UpdateTransaction("success", orderId)
 	} else if transactionStatus == "deny" {
 		// TODO you can ignore 'deny', because most of the time it allows payment retries
 		// and later can become success
 		SendMail("failed", transaction)
-		h.TransactionRepository.UpdateTransaction("failed",  orderId)
+		h.TransactionRepository.UpdateTransaction("failed", orderId)
 	} else if transactionStatus == "cancel" || transactionStatus == "expire" {
 		// TODO set transaction status on your databaase to 'failure'
 		SendMail("failed", transaction)
-		h.TransactionRepository.UpdateTransaction("failed",  orderId)
+		h.TransactionRepository.UpdateTransaction("failed", orderId)
 	} else if transactionStatus == "pending" {
 		// TODO set transaction status on your databaase to 'pending' / waiting payment
-		h.TransactionRepository.UpdateTransaction("pending",  orderId)
+		h.TransactionRepository.UpdateTransaction("pending", orderId)
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -190,12 +185,12 @@ func (h *handlerTransaction) Notification(w http.ResponseWriter, r *http.Request
 
 func convertResponseTransaction(t models.Transaction) transactiondto.TransactionResponse {
 	return transactiondto.TransactionResponse{
-		ID:      	t.ID,
-		Product:   	t.Product,
-		Buyer:  	t.Buyer,
-		Seller: 	t.Seller,
-		Price:  	t.Price,
-		Status:    	t.Status,
+		ID:      t.ID,
+		Product: t.Product,
+		Buyer:   t.Buyer,
+		Seller:  t.Seller,
+		Price:   t.Price,
+		Status:  t.Status,
 	}
 }
 
